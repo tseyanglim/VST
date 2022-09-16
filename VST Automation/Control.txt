@@ -1,0 +1,20 @@
+{
+	"baserunname": "PrPr", 
+	"simsettings": {
+		"model": "prey-predator.mdl", 
+		"data": [
+			"hudson-bay-lynx-hare.vdf"
+			], 
+		"payoff": "prey-predator.vpd", 
+		"sensitivity": "", 
+		"optparm": "prey-predator.voc", 
+		"changes": [], 
+		"savelist": "", 
+		"senssavelist": ""
+		},
+	"venginepath": "C:/Program Files (x86)/Vengine/Vensim - vengine.exe", 
+	"vensimpath": "C:/Program Files (x86)/Vensim7/vensimdp.exe",  
+	"graphs": "",
+	"timelimit": 600,
+	"mccores": 0
+	}
