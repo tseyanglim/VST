@@ -51,38 +51,39 @@ from shutil import copy
 
 def update_mdl_params(inputfile, mdlfile):
     """Read parameter values from `inputfile` and replace corresponding 
-    parameter values in `mdlfile`"""
+    parameter values in `mdlfile`
+    """
     
     # Compile regex to identify varnames and values from file text
     inregex = regex.compile(
-        r"(?:<=\s?)?(?!\s)" # Identify optional '<=' and ignore preceding whitespace
-        r"([a-zA-Z0-9\s\[\],_]*)" # Capture varname, possibly including [],_
-        r"(?<! )\s*=\s*" # Ignore trailing whitespace on varname and identify '='
-        r"(-?(?:0|[1-9]\d*)(?:\.\d*)?" # Capture value, incl. -. scientific notation
-        r"(?:[eE][+\-]?\d+)?)(?:\s*<=)?" # Capture scientific notation and identify optional '<='
+        r"(?:<=\s?)?(?!\s)"  # Identify optional '<=' and ignore preceding whitespace
+        r"([a-zA-Z0-9\s\[\],_]*)"  # Capture varname, possibly including [],_
+        r"(?<! )\s*=\s*"  # Ignore trailing whitespace on varname and identify '='
+        r"(-?(?:0|[1-9]\d*)(?:\.\d*)?"  # Capture value, incl. -. scientific notation
+        r"(?:[eE][+\-]?\d+)?)(?:\s*<=)?"  # Capture scientific notation and identify optional '<='
     )
 
     with open(inputfile, 'r') as f:
-        lines = [line for line in f.readlines() if line[0] != ':'] # Ignore control/comment lines
+        lines = [line for line in f.readlines() if line[0] != ':']  # Ignore control/comment lines
         text = ''.join(lines)
 
-    results = regex.findall(inregex, text) # Pull out list of (varname, value) tuples
+    results = regex.findall(inregex, text)  # Pull out list of (varname, value) tuples
 
-    copy(mdlfile, f'./{mdlfile[:-4]}_BACKUP{mdlfile[-4:]}') # Create backup copy of model file
+    copy(mdlfile, f'./{mdlfile[:-4]}_BACKUP{mdlfile[-4:]}')  # Create backup copy of model file
 
     with open(mdlfile, 'r') as m:
         mdl = m.read()
         
-        for var, val in results: # Loop through list of regex results
-            varregex = regex.compile(r"\n" # Include linebreak to avoid varname substrings
-                                     + regex.escape(var) # Combine varname with existing value
+        for var, val in results:  # Loop through list of regex results
+            varregex = regex.compile(r"\n"  # Include linebreak to avoid varname substrings
+                                     + regex.escape(var)  # Combine varname with existing value
                                      + r"\s*=\s*(-?(?:0|[1-9]\d*)(?:\.\d*)?(?:[eE][+\-]?\d+)?)")
-            mdl = varregex.sub(f"{var} = {val}", mdl) # Substitute new varname and value
+            mdl = varregex.sub(f"{var} = {val}", mdl)  # Substitute new varname and value
 
         ### TODO: consider whether loop necessary or substitution can be done simultaneously
         ### using compiled match pattern with '|'.join
         
-    with open(mdlfile, 'w') as m: # Write output to model
+    with open(mdlfile, 'w') as m:  # Write output to model
         m.write(mdl)
 
     print("Substitution complete!")

@@ -41,7 +41,7 @@ def rep_strings(string, subs):
     str
         Text with replacements made
     """
-    substrings = sorted(subs, key=len, reverse=True) # Arrange replacement keys by length
+    substrings = sorted(subs, key=len, reverse=True)  # Arrange replacement keys by length
     regexp = regex.compile('|'.join(map(regex.escape, substrings)))
     return regexp.sub(lambda match: subs[match.group(0)], string)
 
@@ -50,13 +50,14 @@ def rep_text(filelist, varnamedict):
     """Replace text using `rep_strings` in multiple files; `filelist` is 
     list of file names/paths w/ extensions, can be absolute or relative 
     to working directory; `varnamedict` is json-format dictionary of str 
-    keys and replacements; NOTE overwrites `filelist` files inplace"""
+    keys and replacements; NOTE overwrites `filelist` files inplace
+    """
     
     with open(filelist, 'r') as fl:
         files = fl.read().splitlines()
-    subs = json.load(open(varnamedict, 'r')) # Read replacements dict
+    subs = json.load(open(varnamedict, 'r'))  # Read replacements dict
 
-    for file in list(filter(None, files)): # Ignores empty lines in filelist
+    for file in list(filter(None, files)):  # Ignores empty lines in filelist
         print(f"Modifying {file}...")
         with open(file, 'r') as f:
             old = f.read()

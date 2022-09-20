@@ -32,7 +32,8 @@ import pandas as pd
 
 def compile_psrf(runname, vensimpath):
     """Using Vensim, convert MCMC_stats.dat output into tab file with 
-    PSRF values (and other MCMC summary stats) for each simulation"""
+    PSRF values (and other MCMC summary stats) for each simulation
+    """
     # Compile .cmd script to convert stats .dat to tabfile
     cmdtext = [
         "SPECIAL>NOINTERACTION\n",
@@ -46,13 +47,13 @@ def compile_psrf(runname, vensimpath):
     with open(f"{runname}_PSRF.cmd", 'w') as scriptfile:
         scriptfile.writelines(cmdtext)
 
-    if os.path.exists(f"./{runname}_MCMC_stats.dat"): # Make sure .dat file exists
+    if os.path.exists(f"./{runname}_MCMC_stats.dat"):  # Make sure .dat file exists
         # Run .dat conversion with Vensim
-        while True: # Keep trying until tabfile created successfully
+        while True:  # Keep trying until tabfile created successfully
             subprocess.run(f"{vensimpath} \"./{runname}_PSRF.cmd\"")
             time.sleep(1)
             if os.path.exists(f"./{runname}_MCMC_stats.tab"):
-                break # If tabfile exists, move on
+                break  # If tabfile exists, move on
             print(f"Help! {runname} is being repressed!")
     else:
         print(f"Help! {runname}_MCMC_stats.dat file does not exist!")
@@ -60,17 +61,18 @@ def compile_psrf(runname, vensimpath):
 
 def calc_psrf(runname, burnin, thresholds):
     """Using MCMC_stats.tab file (from `compile_psrf` function), return 
-    % of PSRF values below each threshold in list of `thresholds`"""
+    % of PSRF values below each threshold in list of `thresholds`
+    """
     
     mcout = pd.read_csv(f'{runname}_MCMC_stats.tab', sep='\t', index_col=0)    
     
     # Subset to only rows containing PSRF values
     psrfs = [i for i in mcout.index if 'PSRF' in i]
-    psrfs.remove('PSRF Payoff') # Except for this one
+    psrfs.remove('PSRF Payoff')  # Except for this one
     mcout = mcout.loc[psrfs]
     
     # Further subset to only simulations after burnin period
-    mcout.columns = mcout.columns.astype('float').astype('int') # Convert columns to int
+    mcout.columns = mcout.columns.astype('float').astype('int')  # Convert columns to int
     mcout = mcout[mcout.columns[mcout.columns > burnin]].dropna(axis=1)
     
     return [np.nanmean(mcout < t) for t in thresholds]
