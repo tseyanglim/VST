@@ -241,7 +241,11 @@ def run_vengine_script(scriptname, venginepath, timelimit, checkfile, check_func
                         write_log("Calibration timed out!", logfile)
                         break
         # Check if process successfully completed or bugged out / was killed
-        if proc.returncode != 1: # Note that Vengine returns 1 on MENU>EXIT, not 0!
+        # if proc.returncode != 1:  # Note that Vengine returns 1 on MENU>EXIT, not 0!
+        ### TODO: Update this when Vengine return codes are fixed
+        ### Vengine 7.2 returns 1 on MENU>EXIT, but Vengine 9.3 sometimes returns 0 
+        ### and sometimes returns 3221225477 despite successful completion
+        if not (proc.returncode == 0 or proc.returncode == 3221225477):
             write_log(f"Return code is {proc.returncode}", logfile)
             write_log("Vensim! Trying again...", logfile)
             continue
