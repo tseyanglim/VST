@@ -1,0 +1,37 @@
+Initialising <vst.Script object at 0x0000024CAD2BAA60>
+Initialising <vst.Script object at 0x00000246915FB9A0>
+Initialising <vst.Script object at 0x000001ECA7F4EFA0>
+Initialising <vst.Script object at 0x000001F3A7E3DDF0>
+Initialising Testhare!
+Initialising <vst.Script object at 0x00000168DA1ABE20>
+Initialising Testhare!
+Return code is 3221226525
+Vensim! Trying again...
+Return code is 3221225477
+Payoff for Testhare is -10359.3, calibration complete!
+Initialising <vst.Script object at 0x00000168D7D83100>
+Initialising Testlynx!
+Return code is 0
+Payoff for Testlynx is -6724.34, calibration complete!
+Initialising <vst.Script object at 0x00000168DA2757F0>
+Initialising Testfullopt!
+Return code is 3221225477
+Payoff for Testfullopt is -1797.73, calibration complete!
+Initialising <vst.Script object at 0x00000168DA275820>
+Initialising TestfullMC!
+Return code is 3221225477
+Payoff for TestfullMC is -1797.73, calibration complete!
+Initialising <vst.Script object at 0x00000168D7D53130>
+Initialising Testprojbase!
+Return code is 3221225477
+Initialising <vst.Script object at 0x00000168D7D5DC70>
+Overwriting default savecmd with SENS2FILE|!|!|T!
+Initialising Testsensbase!
+Return code is 3221225477
+Initialising <vst.Script object at 0x00000168DA3B9910>
+Initialising Testprojhunt!
+Return code is 3221225477
+Initialising <vst.Script object at 0x00000168DA3B9A00>
+Overwriting default savecmd with SENS2FILE|!|!|T!
+Initialising Testsenshunt!
+Return code is 3221225477
