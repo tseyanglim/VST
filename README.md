@@ -5,7 +5,7 @@ This project is a collection of Python-based tools for working with [Vensim](htt
 
 ## Materials
 
-**VST** (UNDER CONSTRUCTION) contains the main codebase. For now, this contains usable code snippets; this will eventually be developed into an installable package.
+[**VST**](vst) contains the main codebase. For now, this contains usable code snippets, as well as `ipynb` notebooks with more extensive documentation; this will eventually be developed into an installable package.
 
 [**VST Automation**](VST%20Automation) *TEMPORARY* contains a basic automation example for 15.879 use.
 
