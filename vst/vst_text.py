@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # coding: utf-8
 
-# In[4]:
+# In[ ]:
 
 
 import os
@@ -9,7 +9,28 @@ import regex
 import numpy as np
 
 
-# In[127]:
+# 
+# #### Check functions
+# The `check_func` argument to `run_vengine_script` allows use of helper functions to catch additional bugs in Vengine output (e.g. nonexistent output, zeroing bug, inconsistent payoffs...); the helper functions should return `True` only if no bugs of concern have occurred. If checks fail, `run_vengine_script` will rerun itself. Existing check functions and the bugs they catch are detailed further below.
+# 
+# ##### check_output
+# The most basic check function ensures that appropriate output (i.e. a `vdf` or `vdfx` file) has been produced. This is a good catch-all check that fails if anything major goes wrong, preventing the optimisation (or sensitivity analysis, etc.) from running.
+# 
+# ##### check_payoffs
+# Running MCMC with Vengine sometimes results in inconsistent sets of results being produced; this can cause trouble down the line. The first symptom is different payoff values reported in the `out` and `rep` files, which this function should catch.
+# 
+# ##### check_restarts
+# Sometimes runs fail silently, without causing Vensim/Vengine to actually crash, usually due to model error (e.g. floating point errors). In this case, an optimisation will 'run' but not yield meaningful results, usually terminating on the initial simulation (or after one simulation per restart). This function catches when the number of simulations equals the number of restarts specified, indicating this sort of failure.
+# 
+# ##### check_zeroes
+# Vengine has an odd bug (still present as of Mar 2022 release) whereby parameters estimated in optimisation are sometimes set to `0` even when that's outside the allowed range for the parameter. If any parameters are erroneously 'zeroed' in this way, this function will catch them.
+# 
+# Note that this function only flags parameters estimated at `0` if `0` is outside the specified optimisation range for the parameter; if one of the bounds is set to `0`, then output values of `0` will not be flagged, *even if those values result from Vengine error*. For this reason, while working with Vengine, I suggest using very small absolute values (e.g. `+/- 1e-6`) in place of `0` for any parameter bounds when specifying optimisation control. For most formulations (e.g. additive, multiplicative, exponential), a very small value will not behave meaningfully differently from `0`.
+# 
+# 
+# 
+
+# In[ ]:
 
 
 def write_log(string, logfile):
@@ -114,35 +135,7 @@ def subset_lines(filename, linekey):
         f.writelines(newdata)
 
 
-# ### Script running functions
-# 
-# `compile_script` calls Vensim or Vengine to run a .cmd file, defaulting to Vengine if available. (*For any substantial analysis, always use Vengine if available!*)
-# 
-# Fundamentally, doing this is extremely simple, and a single `subprocess.Popen` or `subprocess.run` call should suffice. But **Vensim is buggy, and Vengine more so**. The `run_vengine_script` and `run_vensim_script` functions wrap the core `subprocess` call in various forms of exception handling and other checks to keep things running smoothly. These checks are crucial for successful hands-off automation. Otherwise you risk coming back to your analysis after it's been running all night to find it's been stuck on a Vensim loading screen for 12 hours.
-# 
-# Because `run_vengine_script` has seen more use, its exception handling is better developed. (Also, Vengine has more bugs.) If needed, you could modify `run_vensim_script` using similar checks, e.g. incorporating a time limit. Get creative. Learn from painful experience.
-# 
-# #### Check functions
-# The `check_func` argument to `run_vengine_script` allows use of helper functions to catch additional bugs in Vengine output (e.g. nonexistent output, zeroing bug, inconsistent payoffs...); the helper functions should return `True` only if no bugs of concern have occurred. If checks fail, `run_vengine_script` will rerun itself. Existing check functions and the bugs they catch are detailed further below.
-# 
-# ##### check_output
-# The most basic check function ensures that appropriate output (i.e. a `vdf` or `vdfx` file) has been produced. This is a good catch-all check that fails if anything major goes wrong, preventing the optimisation (or sensitivity analysis, etc.) from running.
-# 
-# ##### check_payoffs
-# Running MCMC with Vengine sometimes results in inconsistent sets of results being produced; this can cause trouble down the line. The first symptom is different payoff values reported in the `out` and `rep` files, which this function should catch.
-# 
-# ##### check_restarts
-# Sometimes runs fail silently, without causing Vensim/Vengine to actually crash, usually due to model error (e.g. floating point errors). In this case, an optimisation will 'run' but not yield meaningful results, usually terminating on the initial simulation (or after one simulation per restart). This function catches when the number of simulations equals the number of restarts specified, indicating this sort of failure.
-# 
-# ##### check_zeroes
-# Vengine has an odd bug (still present as of Mar 2022 release) whereby parameters estimated in optimisation are sometimes set to `0` even when that's outside the allowed range for the parameter. If any parameters are erroneously 'zeroed' in this way, this function will catch them.
-# 
-# Note that this function only flags parameters estimated at `0` if `0` is outside the specified optimisation range for the parameter; if one of the bounds is set to `0`, then output values of `0` will not be flagged, *even if those values result from Vengine error*. For this reason, while working with Vengine, I suggest using very small absolute values (e.g. `+/- 1e-6`) in place of `0` for any parameter bounds when specifying optimisation control. For most formulations (e.g. additive, multiplicative, exponential), a very small value will not behave meaningfully differently from `0`.
-# 
-# 
-# 
-
-# In[149]:
+# In[ ]:
 
 
 def check_output(scriptname, logfile):

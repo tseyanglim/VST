@@ -3,7 +3,7 @@
 
 # **NOTE:** this version is *not* backward-compatible with existing scripts: 1) `Script` objects and use syntax have been substantially modified, and 2) newest Vengine no longer has the expiration popup to bypass, so `press` lines are no longer needed and have been removed.
 
-# In[1]:
+# In[ ]:
 
 
 import os
@@ -18,7 +18,78 @@ from keyboard import press
 from shutil import copy
 
 
-# In[5]:
+# ## `Script` objects
+# 
+# `vst` is built around the `Script` class. Each `Script` instance corresponds to a single Vensim command script (`.cmd` file) - its various settings, the `.cmd` itself, and its output (**TODO:** Associate output VDF and tabfile with `Script` object). `Script` objects thus serve as convenient containers and interfaces for command scripts, while largely obviating the need to know or directly utilise Vensim command script syntax.
+# 
+# Basic `Script` use syntax is something like:
+# ```
+# x = Script(controlfile, name, logfile, sfxs=suffixes, chglist=changes)
+# x.compile_script(logfile, **kwargs)
+# ```
+# This will create an instance `x` of a `Script` object with the specified settings (detailed below), compile it into a `.cmd` file, and execute that `.cmd` file to produce a Vensim run and output.
+# 
+# This basic syntax can be wrapped in more complex workflows, such as iteratively estimating different levels of a hierarchical model, creating a pipeline for estimating and then running sensitivity analysis under different scenarios, and so on, with necessary modifications to the `Script` instance created each time. This approach is especially powerful with procedurally generated or standardised modifications.
+# 
+# ### `Script` initialisation arguments
+# 
+# Each `Script` instance is initialised with several arguments:
+# 
+# #### controlfile
+# The `controlfile` is a `dict` or `JSON` object with basic settings such as:
+# - the `basename` to use for runs
+# - `simcontrol`, a sub-dictionary closely corresponding to the fields in Vensim's 'Simulation Control' dialogue box
+# - optionally, `runcmd` and `savecmd`, command-script syntax commands for specific run and save settings
+# 
+# `controlfile` fields are intended to be fairly stable in a given analysis - while it's conceivable they may need to be changed in the analytical pipeline for a given model (particularly `runcmd` and `savecmd`)(**TODO:** consider whether to move these two fields to `__init__` arguments), most analysis of a given model should be able to use a fixed `controlfile`, with modifications applied as needed through the other `Script` arguments below.
+# 
+# #### name
+# A `str` extension to append to the `basename` for a given instance / run. Ideally this would be standardised and/or procedurally generated within an analytical pipeline; `chglist` syntax (see below) allows parsing of various procedurally generated name strings for easy iteration.
+# 
+# ##### Recommended naming convention:
+# `basename` `subset` `iteration/type` `base cins` `policy/scenario cins`
+# 1. `basename` - shared by all runs in a given analysis
+# 2. `subset` - specific submodel or analysis (e.g. main, holdout, syndata)
+# 3. `iteration/type` - iteration no. or type of run (e.g. MC, sens, scen)
+# 4. `base cins` - CIN files (shared assumption sets)
+# 5. `policy/scenario cins` - CIN files (individual policies/scenarios)
+# 
+# #### logfile
+# File used for shared progress & error logging with `write_log` (**TODO:** switch to using `logging` module)
+# 
+# #### sfxs
+# A `dict` of `simcontrol` entries, such as payoff `vpd` or sensitivity control `vsc`, and corresponding string suffixes to modify them with. For instance, if the `simcontrol` specified payoff file is `foo.vpd`, specifying `payoff: '_b'` would modify the payoff file for this `Script` instance to `foo_b.vpd`. Useful for specifying different model or simulation control file versions, denoted by automatically assigned suffixes, for different `Script` instances. Any suffixes specified for missing `simcontrol` entries will be quietly ignored.
+# 
+# #### chglist
+# A `list` of changes files to add to the `Script` beyond those specified in `simcontrol`. Entries are appended to `changes` in the order that they appear in `chglist`. Entries in `chglist` can be:
+# - Single strings, e.g. ``'Scenario.cin'` -> these are added as-is, and should include file extensions; useful for adding `.cin` files for specific scenarios, policy analysis, etc.
+# - Tuples of two elements, either:
+#     - Two strings, e.g. `('Main', 'MC')` -> these are concatenated with the `basename` and `.out` extension, e.g. `'{basename}MainMC.out'`; useful for adding results of a previous optimization or iteration
+#     - A list and string, e.g. `(['Albert', 'Bob', 'Charlie'], 'Final')` -> these are likewise concatenated with `basename` and `.out` extension, for each element in the list, e.g. `['{basename}AlbertFinal.out', '{basename}BobFinal.out', '{basename}CharlieFinal.out']`; useful for easily combining multiple outputs from previous optimizations, as is common with a hierarchical estimation approach
+# 
+# #### setvals
+# A `list` of tuples containing paired variable names and values, to be included in a `Script` using Vensim's SETVAL command. All SETVAL commands are implemented together for the run. This is particularly useful for reducing file proliferation, especially for e.g. parametric sensitivity analysis; note however that the only obvious record in any output files of changes made with SETVAL will be in the `.cmd` file, which may confound easy replication.
+# 
+# #### simtype: `o`, `r`, `s`, `sf`; default `o`
+# Type of simulation to run; determines default `runcmd` and `savecmd` to use if not otherwise specified:
+# - `o`: optimization
+# - `r`: simple run
+# - `s`: sensitivity with percentile output
+# - `sf`: sensitivity with full output saving
+# (**TODO:** figure out Tidy format sensitivity output default `savecmd`)
+# 
+# ### Script running functions
+# 
+# `compile_script` calls Vensim or Vengine to run a .cmd file, defaulting to Vengine if available. (*For any substantial analysis, always use Vengine if available!*)
+# 
+# Fundamentally, doing this is extremely simple, and a single `subprocess.Popen` or `subprocess.run` call should suffice. But **Vensim is buggy, and Vengine more so**. The `run_vengine_script` and `run_vensim_script` functions wrap the core `subprocess` call in various forms of exception handling and other checks to keep things running smoothly. These checks are crucial for successful hands-off automation. Otherwise you risk coming back to your analysis after it's been running all night to find it's been stuck on a Vensim loading screen for 12 hours.
+# 
+# Because `run_vengine_script` has seen more use, its exception handling is better developed. (Also, Vengine has more bugs.) If needed, you could modify `run_vensim_script` using similar checks, e.g. incorporating a time limit. Get creative. Learn from painful experience.
+# 
+# #### Check functions
+# The `check_func` argument to `run_vengine_script` allows use of helper functions to catch additional bugs in Vengine output (e.g. nonexistent output, zeroing bug, inconsistent payoffs...); the helper functions should return `True` only if no bugs of concern have occurred. If checks fail, `run_vengine_script` will rerun itself. Existing check functions and the bugs they catch are detailed in `VST-Text.ipynb`.
+
+# In[ ]:
 
 
 class Script(object):
@@ -321,66 +392,6 @@ def run_vensim_script(scriptname, vensimpath, logfile, maxattempts=10, outext='.
         return payoffvalue  # For optimisation runs, return payoff
     return 0  # Set default payoff value for simtypes that don't generate one
 
-
-# ## `Script` objects
-# 
-# `vst` is built around the `Script` class. Each `Script` instance corresponds to a single Vensim command script (`.cmd` file) - its various settings, the `.cmd` itself, and its output (**TODO:** Associate output VDF and tabfile with `Script` object). `Script` objects thus serve as convenient containers and interfaces for command scripts, while largely obviating the need to know or directly utilise Vensim command script syntax.
-# 
-# Basic `Script` use syntax is something like:
-# ```
-# x = Script(controlfile, name, logfile, sfxs=suffixes, chglist=changes)
-# x.compile_script(logfile, **kwargs)
-# ```
-# This will create an instance `x` of a `Script` object with the specified settings (detailed below), compile it into a `.cmd` file, and execute that `.cmd` file to produce a Vensim run and output.
-# 
-# This basic syntax can be wrapped in more complex workflows, such as iteratively estimating different levels of a hierarchical model, creating a pipeline for estimating and then running sensitivity analysis under different scenarios, and so on, with necessary modifications to the `Script` instance created each time. This approach is especially powerful with procedurally generated or standardised modifications.
-# 
-# ### `Script` initialisation arguments
-# 
-# Each `Script` instance is initialised with several arguments:
-# 
-# #### controlfile
-# The `controlfile` is a `dict` or `JSON` object with basic settings such as:
-# - the `basename` to use for runs
-# - `simcontrol`, a sub-dictionary closely corresponding to the fields in Vensim's 'Simulation Control' dialogue box
-# - optionally, `runcmd` and `savecmd`, command-script syntax commands for specific run and save settings
-# 
-# `controlfile` fields are intended to be fairly stable in a given analysis - while it's conceivable they may need to be changed in the analytical pipeline for a given model (particularly `runcmd` and `savecmd`)(**TODO:** consider whether to move these two fields to `__init__` arguments), most analysis of a given model should be able to use a fixed `controlfile`, with modifications applied as needed through the other `Script` arguments below.
-# 
-# #### name
-# A `str` extension to append to the `basename` for a given instance / run. Ideally this would be standardised and/or procedurally generated within an analytical pipeline; `chglist` syntax (see below) allows parsing of various procedurally generated name strings for easy iteration.
-# 
-# ##### Recommended naming convention:
-# `basename` `subset` `iteration/type` `base cins` `policy/scenario cins`
-# 1. `basename` - shared by all runs in a given analysis
-# 2. `subset` - specific submodel or analysis (e.g. main, holdout, syndata)
-# 3. `iteration/type` - iteration no. or type of run (e.g. MC, sens, scen)
-# 4. `base cins` - CIN files (shared assumption sets)
-# 5. `policy/scenario cins` - CIN files (individual policies/scenarios)
-# 
-# #### logfile
-# File used for shared progress & error logging with `write_log` (**TODO:** switch to using `logging` module)
-# 
-# #### sfxs
-# A `dict` of `simcontrol` entries, such as payoff `vpd` or sensitivity control `vsc`, and corresponding string suffixes to modify them with. For instance, if the `simcontrol` specified payoff file is `foo.vpd`, specifying `payoff: '_b'` would modify the payoff file for this `Script` instance to `foo_b.vpd`. Useful for specifying different model or simulation control file versions, denoted by automatically assigned suffixes, for different `Script` instances. Any suffixes specified for missing `simcontrol` entries will be quietly ignored.
-# 
-# #### chglist
-# A `list` of changes files to add to the `Script` beyond those specified in `simcontrol`. Entries are appended to `changes` in the order that they appear in `chglist`. Entries in `chglist` can be:
-# - Single strings, e.g. ``'Scenario.cin'` -> these are added as-is, and should include file extensions; useful for adding `.cin` files for specific scenarios, policy analysis, etc.
-# - Tuples of two elements, either:
-#     - Two strings, e.g. `('Main', 'MC')` -> these are concatenated with the `basename` and `.out` extension, e.g. `'{basename}MainMC.out'`; useful for adding results of a previous optimization or iteration
-#     - A list and string, e.g. `(['Albert', 'Bob', 'Charlie'], 'Final')` -> these are likewise concatenated with `basename` and `.out` extension, for each element in the list, e.g. `['{basename}AlbertFinal.out', '{basename}BobFinal.out', '{basename}CharlieFinal.out']`; useful for easily combining multiple outputs from previous optimizations, as is common with a hierarchical estimation approach
-# 
-# #### setvals
-# A `list` of tuples containing paired variable names and values, to be included in a `Script` using Vensim's SETVAL command. All SETVAL commands are implemented together for the run. This is particularly useful for reducing file proliferation, especially for e.g. parametric sensitivity analysis; note however that the only obvious record in any output files of changes made with SETVAL will be in the `.cmd` file, which may confound easy replication.
-# 
-# #### simtype: `o`, `r`, `s`, `sf`; default `o`
-# Type of simulation to run; determines default `runcmd` and `savecmd` to use if not otherwise specified:
-# - `o`: optimization
-# - `r`: simple run
-# - `s`: sensitivity with percentile output
-# - `sf`: sensitivity with full output saving
-# (**TODO:** figure out Tidy format sensitivity output default `savecmd`)
 
 # In[ ]:
 
