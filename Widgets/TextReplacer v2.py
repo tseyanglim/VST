@@ -74,7 +74,7 @@ def rep_text(filelist, varnamedict):
 filelist = input("Enter FileList (with extension):") 
 varnamedict = input("Enter VarNameDict (with extension):")
 
-rep_text(filelistname, varnamedict)
+rep_text(filelist, varnamedict)
 print("Job done!")
 
 
